@@ -1,0 +1,95 @@
+image: docker-ro.laputa.veracode.io/agora/buildbox:latest
+  
+# include:
+#  - https://gitlab.laputa.veracode.io/sms/laputa-utils/raw/master/tag-master.yml
+
+variables: 
+  GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+
+stages:
+  - test
+  - build
+  - lint
+  - greenlight
+  - integration_test
+  - scan
+  - stage_test
+ 
+before_script:
+  - chmod +x gradlew
+  - curl https://gitlab.laputa.veracode.io/sms/laputa-utils/raw/18.8.3/configure-aws.sh | sh
+
+unit test:
+  stage: test
+  script: ./gradlew test
+
+build:
+  stage: build
+  artifacts:
+    name: build-output
+    paths:
+      - build
+    expire_in: 2 months
+  script: ./gradlew clean build
+
+code quality:
+  stage: lint
+  script: echo "running lint"
+
+
+# do a greenlight scan using the latest released ZIP
+greenlight scan:
+  stage: greenlight
+  dependencies:
+    - build
+  artifacts:
+    name: greenlight-results
+    paths:
+      - results.json
+    expire_in: 2 months
+    when: always
+  script:
+    - curl -O https://downloads.veracode.com/securityscan/gl-scanner-java-LATEST.zip
+    - unzip gl-scanner-java-LATEST.zip gl-scanner-java.jar
+    - java -jar gl-scanner-java.jar
+      --api_id "${VERACODE_API_ID}"
+      --api_secret_key "${VERACODE_API_SECRET}"
+      --project_name "${CI_PROJECT_NAME}"
+      --project_url "${CI_PROJECT_URL}"
+      --project_ref "${CI_COMMIT_REF_NAME}"
+
+
+integration:
+  stage: integration_test
+  only:
+    - tags
+  script: echo "Integration Test"
+
+source clear scan:
+  stage: scan
+  only:
+    - tags
+  script: echo "Scanning Open Source libs"
+
+static scan:
+  stage: scan
+  dependencies:
+    - build
+  script:
+    - curl -O https://tools.veracode.com/integrations/API-Wrappers/Java/bin/VeracodeJavaAPI.zip
+    - unzip VeracodeJavaAPI.zip VeracodeJavaAPI.jar
+    - ls -R
+    - java -jar VeracodeJavaAPI.jar -vid ${VERACODE_API_ID} -vkey ${VERACODE_API_SECRET}
+      -action UploadAndScan -appname ${CI_PROJECT_NAME} -createprofile true -autoscan true
+      -filepath build/libs/ -version ${CI_COMMIT_TAG}
+  only:
+    - tags
+  allow_failure: true
+
+
+Stage and Test:
+  stage: stage_test
+  only:
+    - tags
+  script: echo "Creating stage, deploying and test"
+
