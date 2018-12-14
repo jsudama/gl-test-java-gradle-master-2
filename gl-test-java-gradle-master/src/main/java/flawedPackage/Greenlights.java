@@ -9,3 +9,4 @@ public class Greenlights {
 		System.out.println(sr.nextInt());
 	}
 }
+//comment
