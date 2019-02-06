@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.Random; //comment
+//comment
     
 @SuppressWarnings("unused")
 public class Flawed {
