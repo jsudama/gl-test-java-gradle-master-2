@@ -1,5 +1,3 @@
-  
-  
 pipeline {
     agent any
 
@@ -7,7 +5,8 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building..'
-                bat 'gradlew build'
+
+		powershell 'mvn package'
             }
         }
 	    		stage('Veracode Upload and Scan') {
