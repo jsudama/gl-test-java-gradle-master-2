@@ -1,4 +1,5 @@
   
+  
 pipeline {
     agent any
 
@@ -6,8 +7,7 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building..'
-
-		powershell 'mvn package'
+                bat 'gradlew build'
             }
         }
 		stage('SCA') {
